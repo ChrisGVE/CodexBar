@@ -9,6 +9,13 @@ enum UsagePaceText {
         let stage: UsagePace.Stage
     }
 
+    struct SessionDetail {
+        let leftLabel: String
+        let rightLabel: String?
+        let expectedUsedPercent: Double
+        let stage: UsagePace.Stage
+    }
+
     private static let minimumExpectedPercent: Double = 3
     private static let minimumSessionExpectedPercent: Double = 10
 
@@ -32,6 +39,23 @@ enum UsagePaceText {
     static func weeklyDetail(provider: UsageProvider, window: RateWindow, now: Date = .init()) -> WeeklyDetail? {
         guard let pace = weeklyPace(provider: provider, window: window, now: now) else { return nil }
         return WeeklyDetail(
+            leftLabel: Self.detailLeftLabel(for: pace),
+            rightLabel: Self.detailRightLabel(for: pace, now: now),
+            expectedUsedPercent: pace.expectedUsedPercent,
+            stage: pace.stage)
+    }
+
+    static func sessionSummary(provider: UsageProvider, window: RateWindow, now: Date = .init()) -> String? {
+        guard let detail = sessionDetail(provider: provider, window: window, now: now) else { return nil }
+        if let rightLabel = detail.rightLabel {
+            return "Pace: \(detail.leftLabel) · \(rightLabel)"
+        }
+        return "Pace: \(detail.leftLabel)"
+    }
+
+    static func sessionDetail(provider: UsageProvider, window: RateWindow, now: Date = .init()) -> SessionDetail? {
+        guard let pace = sessionPace(provider: provider, window: window, now: now) else { return nil }
+        return SessionDetail(
             leftLabel: Self.detailLeftLabel(for: pace),
             rightLabel: Self.detailRightLabel(for: pace, now: now),
             expectedUsedPercent: pace.expectedUsedPercent,

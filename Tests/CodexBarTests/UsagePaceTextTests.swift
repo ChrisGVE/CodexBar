@@ -194,4 +194,41 @@ struct UsagePaceTextTests {
             resetDescription: nil)
         #expect(UsagePaceText.sessionPace(provider: .claude, window: window, now: now) != nil)
     }
+
+    @Test
+    func `session detail provides labels`() {
+        // 50% elapsed in a 5h window, 70% used → 20% deficit
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 70,
+            windowMinutes: 300,
+            resetsAt: now.addingTimeInterval(150 * 60),
+            resetDescription: nil)
+        let detail = UsagePaceText.sessionDetail(provider: .codex, window: window, now: now)
+        #expect(detail?.leftLabel == "20% in deficit")
+        #expect(detail?.rightLabel != nil)
+    }
+
+    @Test
+    func `session detail returns nil for unsupported provider`() {
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 50,
+            windowMinutes: 300,
+            resetsAt: now.addingTimeInterval(150 * 60),
+            resetDescription: nil)
+        #expect(UsagePaceText.sessionDetail(provider: .zai, window: window, now: now) == nil)
+    }
+
+    @Test
+    func `session summary formats single line text`() {
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 70,
+            windowMinutes: 300,
+            resetsAt: now.addingTimeInterval(150 * 60),
+            resetDescription: nil)
+        let summary = UsagePaceText.sessionSummary(provider: .codex, window: window, now: now)
+        #expect(summary?.hasPrefix("Pace: 20% in deficit") == true)
+    }
 }
