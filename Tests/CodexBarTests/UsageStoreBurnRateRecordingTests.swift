@@ -81,4 +81,57 @@ struct UsageStoreBurnRateRecordingTests {
         let samples = await buffer.samples(for: key)
         #expect(samples.count == 1)
     }
+
+    @Test
+    func `short term burn rate returns nil without snapshot`() async {
+        let store = self.makeStore()
+        let rate = await store.shortTermBurnRate(provider: .codex, window: .primary)
+        #expect(rate == nil)
+    }
+
+    @Test
+    func `short term burn rate returns reading after enough samples`() async {
+        let store = self.makeStore()
+        let identity = ProviderIdentitySnapshot(
+            providerID: .codex,
+            accountEmail: "alice@example.com",
+            accountOrganization: nil,
+            loginMethod: nil)
+        // Five samples 60s apart, +10% each → 600 %/h
+        let baseTime = Date()
+        for i in 0..<5 {
+            let sampledAt = baseTime.addingTimeInterval(TimeInterval(i * 60))
+            let snapshot = UsageSnapshot(
+                primary: RateWindow(
+                    usedPercent: Double(i * 10),
+                    windowMinutes: 300,
+                    resetsAt: sampledAt.addingTimeInterval(225 * 60),
+                    resetDescription: nil),
+                secondary: nil,
+                tertiary: nil,
+                updatedAt: sampledAt,
+                identity: identity)
+            await store.recordBurnRateSample(provider: .codex, snapshot: snapshot)
+        }
+
+        // Set the latest snapshot on the store so the accessor can find a key.
+        store.snapshots[.codex] = UsageSnapshot(
+            primary: RateWindow(
+                usedPercent: 40,
+                windowMinutes: 300,
+                resetsAt: baseTime.addingTimeInterval(225 * 60),
+                resetDescription: nil),
+            secondary: nil,
+            tertiary: nil,
+            updatedAt: baseTime.addingTimeInterval(240),
+            identity: identity)
+
+        let rate = await store.shortTermBurnRate(
+            provider: .codex,
+            window: .primary,
+            now: baseTime.addingTimeInterval(240))
+        #expect(rate != nil)
+        let percentPerHour = rate?.percentPerHour ?? 0
+        #expect(abs(percentPerHour - 600) < 1)
+    }
 }
