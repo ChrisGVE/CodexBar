@@ -21,19 +21,25 @@ extension UsageStore {
             secondaryUsedPercent: snapshot.secondary?.usedPercent)
         await self.burnRateBufferStore.append(sample, for: key, now: snapshot.updatedAt)
 
-        // Recompute the cached short-term rate so synchronous menu rendering
-        // can read it without going through the actor each time.
+        // Recompute the cached short-term and long-term rates so synchronous
+        // menu rendering can read them without going through the actor each time.
         let samples = await self.burnRateBufferStore.samples(for: key)
-        let primary = BurnRateEvaluator.shortTerm(
+        self.primaryBurnRates[provider] = BurnRateEvaluator.shortTerm(
             samples: samples,
             window: .primary,
             now: snapshot.updatedAt)
-        let secondary = BurnRateEvaluator.shortTerm(
+        self.secondaryBurnRates[provider] = BurnRateEvaluator.shortTerm(
             samples: samples,
             window: .secondary,
             now: snapshot.updatedAt)
-        self.primaryBurnRates[provider] = primary
-        self.secondaryBurnRates[provider] = secondary
+        self.primaryLongTermBurnRates[provider] = BurnRateEvaluator.longTerm(
+            samples: samples,
+            window: .primary,
+            now: snapshot.updatedAt)
+        self.secondaryLongTermBurnRates[provider] = BurnRateEvaluator.longTerm(
+            samples: samples,
+            window: .secondary,
+            now: snapshot.updatedAt)
     }
 
     /// Sync accessor for the cached short-term primary-window rate.
@@ -46,11 +52,27 @@ extension UsageStore {
         self.secondaryBurnRates[provider]
     }
 
-    /// Formats a BurnRate as a short `% per hour` label suitable for the
-    /// menu card detail row. Returns `nil` for missing rates.
-    static func burnRateLabel(_ rate: BurnRate?) -> String? {
-        guard let rate else { return nil }
-        return String(format: "%.1f %%/h", rate.percentPerHour)
+    /// Sync accessor for the cached long-term primary-window rate.
+    func primaryLongTermBurnRate(for provider: UsageProvider) -> BurnRate? {
+        self.primaryLongTermBurnRates[provider]
+    }
+
+    /// Sync accessor for the cached long-term secondary-window rate.
+    func secondaryLongTermBurnRate(for provider: UsageProvider) -> BurnRate? {
+        self.secondaryLongTermBurnRates[provider]
+    }
+
+    /// Formats a short-term `BurnRate` plus an optional long-term peer
+    /// for comparison. Returns `nil` when no short-term rate exists.
+    /// When a long-term rate is also present the label appends a small
+    /// trend hint, e.g. `12.4 %/h (vs 5.1 %/h 24h)`. Both lines are
+    /// idle-corrected — see BurnRateEvaluator for the asymmetry note.
+    static func burnRateLabel(short: BurnRate?, long: BurnRate? = nil) -> String? {
+        guard let short else { return nil }
+        let shortText = String(format: "%.1f %%/h", short.percentPerHour)
+        guard let long else { return shortText }
+        let longText = String(format: "%.1f", long.percentPerHour)
+        return "\(shortText) (vs \(longText) 24h)"
     }
 
     private func burnRateAccountID(for provider: UsageProvider, snapshot: UsageSnapshot) -> String {

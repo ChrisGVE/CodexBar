@@ -83,6 +83,27 @@ struct UsageStoreBurnRateRecordingTests {
     }
 
     @Test
+    func `burn rate label formats short only`() {
+        let short = BurnRate(percentPerHour: 12.4, lookback: 3600, isIdleCorrected: true, sampleCount: 5)
+        let label = UsageStore.burnRateLabel(short: short)
+        #expect(label == "12.4 %/h")
+    }
+
+    @Test
+    func `burn rate label formats short with long term comparison`() {
+        let short = BurnRate(percentPerHour: 12.4, lookback: 3600, isIdleCorrected: true, sampleCount: 5)
+        let long = BurnRate(percentPerHour: 5.1, lookback: 86400, isIdleCorrected: true, sampleCount: 30)
+        let label = UsageStore.burnRateLabel(short: short, long: long)
+        #expect(label == "12.4 %/h (vs 5.1 24h)")
+    }
+
+    @Test
+    func `burn rate label nil when short missing`() {
+        let label = UsageStore.burnRateLabel(short: nil, long: nil)
+        #expect(label == nil)
+    }
+
+    @Test
     func `short term burn rate returns nil without snapshot`() async {
         let store = self.makeStore()
         let rate = await store.shortTermBurnRate(provider: .codex, window: .primary)

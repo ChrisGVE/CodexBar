@@ -338,8 +338,12 @@ struct ProvidersPane: View {
             tokenError = nil
         }
 
-        let primaryBurn = UsageStore.burnRateLabel(self.store.primaryBurnRate(for: provider))
-        let secondaryBurn = UsageStore.burnRateLabel(self.store.secondaryBurnRate(for: provider))
+        let primaryBurn = UsageStore.burnRateLabel(
+            short: self.store.primaryBurnRate(for: provider),
+            long: self.store.primaryLongTermBurnRate(for: provider))
+        let secondaryBurn = UsageStore.burnRateLabel(
+            short: self.store.secondaryBurnRate(for: provider),
+            long: self.store.secondaryLongTermBurnRate(for: provider))
         let input = UsageMenuCardView.Model.Input(
             provider: provider,
             metadata: metadata,

@@ -1395,8 +1395,12 @@ extension StatusItemController {
 
         let sourceLabel = snapshotOverride == nil ? self.store.sourceLabel(for: target) : nil
         let kiloAutoMode = target == .kilo && self.settings.kiloUsageDataSource == .auto
-        let primaryBurn = UsageStore.burnRateLabel(self.store.primaryBurnRate(for: target))
-        let secondaryBurn = UsageStore.burnRateLabel(self.store.secondaryBurnRate(for: target))
+        let primaryBurn = UsageStore.burnRateLabel(
+            short: self.store.primaryBurnRate(for: target),
+            long: self.store.primaryLongTermBurnRate(for: target))
+        let secondaryBurn = UsageStore.burnRateLabel(
+            short: self.store.secondaryBurnRate(for: target),
+            long: self.store.secondaryLongTermBurnRate(for: target))
 
         let input = UsageMenuCardView.Model.Input(
             provider: target,
