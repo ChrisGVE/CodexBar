@@ -1320,7 +1320,7 @@ extension StatusItemController {
     }
 
     private func isHostedSubviewMenu(_ menu: NSMenu) -> Bool {
-        let ids: Set<String> = [
+        let ids: Set = [
             "usageBreakdownChart",
             "creditsHistoryChart",
             "costHistoryChart",
@@ -1332,7 +1332,7 @@ extension StatusItemController {
     }
 
     private func isOpenAIWebSubviewMenu(_ menu: NSMenu) -> Bool {
-        let ids: Set<String> = [
+        let ids: Set = [
             "usageBreakdownChart",
             "creditsHistoryChart",
         ]
@@ -1395,6 +1395,8 @@ extension StatusItemController {
 
         let sourceLabel = snapshotOverride == nil ? self.store.sourceLabel(for: target) : nil
         let kiloAutoMode = target == .kilo && self.settings.kiloUsageDataSource == .auto
+        let primaryBurn = UsageStore.burnRateLabel(self.store.primaryBurnRate(for: target))
+        let secondaryBurn = UsageStore.burnRateLabel(self.store.secondaryBurnRate(for: target))
 
         let input = UsageMenuCardView.Model.Input(
             provider: target,
@@ -1416,7 +1418,9 @@ extension StatusItemController {
             sourceLabel: sourceLabel,
             kiloAutoMode: kiloAutoMode,
             hidePersonalInfo: self.settings.hidePersonalInfo,
-            now: Date())
+            now: Date(),
+            primaryBurnRateText: primaryBurn,
+            secondaryBurnRateText: secondaryBurn)
         return UsageMenuCardView.Model.make(input)
     }
 

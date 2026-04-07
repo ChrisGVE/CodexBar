@@ -338,6 +338,8 @@ struct ProvidersPane: View {
             tokenError = nil
         }
 
+        let primaryBurn = UsageStore.burnRateLabel(self.store.primaryBurnRate(for: provider))
+        let secondaryBurn = UsageStore.burnRateLabel(self.store.secondaryBurnRate(for: provider))
         let input = UsageMenuCardView.Model.Input(
             provider: provider,
             metadata: metadata,
@@ -356,7 +358,9 @@ struct ProvidersPane: View {
             tokenCostUsageEnabled: self.settings.isCostUsageEffectivelyEnabled(for: provider),
             showOptionalCreditsAndExtraUsage: self.settings.showOptionalCreditsAndExtraUsage,
             hidePersonalInfo: self.settings.hidePersonalInfo,
-            now: Date())
+            now: Date(),
+            primaryBurnRateText: primaryBurn,
+            secondaryBurnRateText: secondaryBurn)
         return UsageMenuCardView.Model.make(input)
     }
 

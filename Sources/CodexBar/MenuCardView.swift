@@ -5,7 +5,7 @@ import SwiftUI
 /// SwiftUI card used inside the NSMenu to mirror Apple's rich menu panels.
 struct UsageMenuCardView: View {
     struct Model {
-        enum PercentStyle: String, Sendable {
+        enum PercentStyle: String {
             case left
             case used
 
@@ -35,6 +35,33 @@ struct UsageMenuCardView: View {
             let detailRightText: String?
             let pacePercent: Double?
             let paceOnTop: Bool
+            let burnRateText: String?
+
+            init(
+                id: String,
+                title: String,
+                percent: Double,
+                percentStyle: PercentStyle,
+                resetText: String?,
+                detailText: String?,
+                detailLeftText: String?,
+                detailRightText: String?,
+                pacePercent: Double?,
+                paceOnTop: Bool,
+                burnRateText: String? = nil)
+            {
+                self.id = id
+                self.title = title
+                self.percent = percent
+                self.percentStyle = percentStyle
+                self.resetText = resetText
+                self.detailText = detailText
+                self.detailLeftText = detailLeftText
+                self.detailRightText = detailRightText
+                self.pacePercent = pacePercent
+                self.paceOnTop = paceOnTop
+                self.burnRateText = burnRateText
+            }
 
             var percentLabel: String {
                 String(format: "%.0f%% %@", self.percent, self.percentStyle.labelSuffix)
@@ -47,7 +74,7 @@ struct UsageMenuCardView: View {
             case error
         }
 
-        struct TokenUsageSection: Sendable {
+        struct TokenUsageSection {
             let sessionLine: String
             let monthLine: String
             let hintLine: String?
@@ -55,7 +82,7 @@ struct UsageMenuCardView: View {
             let errorCopyText: String?
         }
 
-        struct ProviderCostSection: Sendable {
+        struct ProviderCostSection {
             let title: String
             let percentUsed: Double
             let spendLine: String
@@ -374,6 +401,12 @@ private struct MetricRow: View {
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                     .lineLimit(1)
             }
+            if let burnRate = self.metric.burnRateText {
+                Text("Burn: \(burnRate)")
+                    .font(.caption2)
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                    .lineLimit(1)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -636,6 +669,8 @@ extension UsageMenuCardView.Model {
         let kiloAutoMode: Bool
         let hidePersonalInfo: Bool
         let now: Date
+        let primaryBurnRateText: String?
+        let secondaryBurnRateText: String?
 
         init(
             provider: UsageProvider,
@@ -657,7 +692,9 @@ extension UsageMenuCardView.Model {
             sourceLabel: String? = nil,
             kiloAutoMode: Bool = false,
             hidePersonalInfo: Bool,
-            now: Date)
+            now: Date,
+            primaryBurnRateText: String? = nil,
+            secondaryBurnRateText: String? = nil)
         {
             self.provider = provider
             self.metadata = metadata
@@ -679,6 +716,8 @@ extension UsageMenuCardView.Model {
             self.kiloAutoMode = kiloAutoMode
             self.hidePersonalInfo = hidePersonalInfo
             self.now = now
+            self.primaryBurnRateText = primaryBurnRateText
+            self.secondaryBurnRateText = secondaryBurnRateText
         }
     }
 
@@ -929,7 +968,8 @@ extension UsageMenuCardView.Model {
                 detailLeftText: nil,
                 detailRightText: nil,
                 pacePercent: nil,
-                paceOnTop: true))
+                paceOnTop: true,
+                burnRateText: input.primaryBurnRateText))
         }
         if let weekly = snapshot.secondary {
             let paceDetail = Self.weeklyPaceDetail(
@@ -965,7 +1005,8 @@ extension UsageMenuCardView.Model {
                 detailLeftText: paceDetail?.leftLabel,
                 detailRightText: paceDetail?.rightLabel,
                 pacePercent: paceDetail?.pacePercent,
-                paceOnTop: paceDetail?.paceOnTop ?? true))
+                paceOnTop: paceDetail?.paceOnTop ?? true,
+                burnRateText: input.secondaryBurnRateText))
         }
         if input.provider == .kilo,
            metrics.contains(where: { $0.id == "primary" }),

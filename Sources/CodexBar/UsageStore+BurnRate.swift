@@ -20,6 +20,37 @@ extension UsageStore {
             primaryUsedPercent: snapshot.primary?.usedPercent,
             secondaryUsedPercent: snapshot.secondary?.usedPercent)
         await self.burnRateBufferStore.append(sample, for: key, now: snapshot.updatedAt)
+
+        // Recompute the cached short-term rate so synchronous menu rendering
+        // can read it without going through the actor each time.
+        let samples = await self.burnRateBufferStore.samples(for: key)
+        let primary = BurnRateEvaluator.shortTerm(
+            samples: samples,
+            window: .primary,
+            now: snapshot.updatedAt)
+        let secondary = BurnRateEvaluator.shortTerm(
+            samples: samples,
+            window: .secondary,
+            now: snapshot.updatedAt)
+        self.primaryBurnRates[provider] = primary
+        self.secondaryBurnRates[provider] = secondary
+    }
+
+    /// Sync accessor for the cached short-term primary-window rate.
+    func primaryBurnRate(for provider: UsageProvider) -> BurnRate? {
+        self.primaryBurnRates[provider]
+    }
+
+    /// Sync accessor for the cached short-term secondary-window rate.
+    func secondaryBurnRate(for provider: UsageProvider) -> BurnRate? {
+        self.secondaryBurnRates[provider]
+    }
+
+    /// Formats a BurnRate as a short `% per hour` label suitable for the
+    /// menu card detail row. Returns `nil` for missing rates.
+    static func burnRateLabel(_ rate: BurnRate?) -> String? {
+        guard let rate else { return nil }
+        return String(format: "%.1f %%/h", rate.percentPerHour)
     }
 
     private func burnRateAccountID(for provider: UsageProvider, snapshot: UsageSnapshot) -> String {
