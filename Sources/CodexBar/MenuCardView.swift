@@ -5,7 +5,7 @@ import SwiftUI
 /// SwiftUI card used inside the NSMenu to mirror Apple's rich menu panels.
 struct UsageMenuCardView: View {
     struct Model {
-        enum PercentStyle: String, Sendable {
+        enum PercentStyle: String {
             case left
             case used
 
@@ -47,7 +47,7 @@ struct UsageMenuCardView: View {
             case error
         }
 
-        struct TokenUsageSection: Sendable {
+        struct TokenUsageSection {
             let sessionLine: String
             let monthLine: String
             let hintLine: String?
@@ -55,7 +55,7 @@ struct UsageMenuCardView: View {
             let errorCopyText: String?
         }
 
-        struct ProviderCostSection: Sendable {
+        struct ProviderCostSection {
             let title: String
             let percentUsed: Double
             let spendLine: String
@@ -902,6 +902,11 @@ extension UsageMenuCardView.Model {
         let zaiTimeDetail = Self.zaiLimitDetailText(limit: zaiUsage?.timeLimit)
         let openRouterQuotaDetail = Self.openRouterQuotaDetail(provider: input.provider, snapshot: snapshot)
         if let primary = snapshot.primary {
+            let sessionPace = Self.sessionPaceDetail(
+                provider: input.provider,
+                window: primary,
+                now: input.now,
+                showUsed: input.usageBarsShowUsed)
             var primaryDetailText: String? = input.provider == .zai ? zaiTokenDetail : nil
             var primaryResetText = Self.resetText(for: primary, style: input.resetTimeDisplayStyle, now: input.now)
             if input.provider == .openrouter,
@@ -926,10 +931,10 @@ extension UsageMenuCardView.Model {
                 percentStyle: percentStyle,
                 resetText: primaryResetText,
                 detailText: primaryDetailText,
-                detailLeftText: nil,
-                detailRightText: nil,
-                pacePercent: nil,
-                paceOnTop: true))
+                detailLeftText: sessionPace?.leftLabel,
+                detailRightText: sessionPace?.rightLabel,
+                pacePercent: sessionPace?.pacePercent,
+                paceOnTop: sessionPace?.paceOnTop ?? true))
         }
         if let weekly = snapshot.secondary {
             let paceDetail = Self.weeklyPaceDetail(
@@ -1055,16 +1060,49 @@ extension UsageMenuCardView.Model {
         showUsed: Bool) -> PaceDetail?
     {
         guard let detail = UsagePaceText.weeklyDetail(provider: provider, window: window, now: now) else { return nil }
-        let expectedUsed = detail.expectedUsedPercent
+        return Self.paceDetail(
+            leftLabel: detail.leftLabel,
+            rightLabel: detail.rightLabel,
+            expectedUsedPercent: detail.expectedUsedPercent,
+            stage: detail.stage,
+            window: window,
+            showUsed: showUsed)
+    }
+
+    private static func sessionPaceDetail(
+        provider: UsageProvider,
+        window: RateWindow,
+        now: Date,
+        showUsed: Bool) -> PaceDetail?
+    {
+        guard let detail = UsagePaceText.sessionDetail(provider: provider, window: window, now: now) else { return nil }
+        return Self.paceDetail(
+            leftLabel: detail.leftLabel,
+            rightLabel: detail.rightLabel,
+            expectedUsedPercent: detail.expectedUsedPercent,
+            stage: detail.stage,
+            window: window,
+            showUsed: showUsed)
+    }
+
+    private static func paceDetail(
+        leftLabel: String,
+        rightLabel: String?,
+        expectedUsedPercent: Double,
+        stage: UsagePace.Stage,
+        window: RateWindow,
+        showUsed: Bool) -> PaceDetail?
+    {
+        let expectedUsed = expectedUsedPercent
         let actualUsed = window.usedPercent
         let expectedPercent = showUsed ? expectedUsed : (100 - expectedUsed)
         let actualPercent = showUsed ? actualUsed : (100 - actualUsed)
         if expectedPercent.isFinite == false || actualPercent.isFinite == false { return nil }
         let paceOnTop = actualUsed <= expectedUsed
-        let pacePercent: Double? = if detail.stage == .onTrack { nil } else { expectedPercent }
+        let pacePercent: Double? = if stage == .onTrack { nil } else { expectedPercent }
         return PaceDetail(
-            leftLabel: detail.leftLabel,
-            rightLabel: detail.rightLabel,
+            leftLabel: leftLabel,
+            rightLabel: rightLabel,
             pacePercent: pacePercent,
             paceOnTop: paceOnTop)
     }
