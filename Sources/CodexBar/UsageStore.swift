@@ -193,6 +193,7 @@ final class UsageStore {
     @ObservationIgnored private var pathDebugRefreshTask: Task<Void, Never>?
     @ObservationIgnored var lastKnownSessionRemaining: [UsageProvider: Double] = [:]
     @ObservationIgnored var lastKnownSessionWindowSource: [UsageProvider: SessionQuotaWindowSource] = [:]
+    @ObservationIgnored let burnRateBufferStore: BurnRateBufferStore
     @ObservationIgnored var lastTokenFetchAt: [UsageProvider: Date] = [:]
     @ObservationIgnored private var hasCompletedInitialRefresh: Bool = false
     @ObservationIgnored private let tokenFetchTTL: TimeInterval = 60 * 60
@@ -205,7 +206,8 @@ final class UsageStore {
         costUsageFetcher: CostUsageFetcher = CostUsageFetcher(),
         settings: SettingsStore,
         registry: ProviderRegistry = .shared,
-        sessionQuotaNotifier: any SessionQuotaNotifying = SessionQuotaNotifier())
+        sessionQuotaNotifier: any SessionQuotaNotifying = SessionQuotaNotifier(),
+        burnRateBufferStore: BurnRateBufferStore = BurnRateBufferStore())
     {
         self.codexFetcher = fetcher
         self.browserDetection = browserDetection
@@ -214,6 +216,7 @@ final class UsageStore {
         self.settings = settings
         self.registry = registry
         self.sessionQuotaNotifier = sessionQuotaNotifier
+        self.burnRateBufferStore = burnRateBufferStore
         self.providerMetadata = registry.metadata
         self
             .failureGates = Dictionary(

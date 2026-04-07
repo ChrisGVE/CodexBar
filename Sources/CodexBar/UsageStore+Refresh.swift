@@ -85,6 +85,7 @@ extension UsageStore {
                 self.errors[provider] = nil
                 self.failureGates[provider]?.recordSuccess()
             }
+            await self.recordBurnRateSample(provider: provider, snapshot: scoped)
             if let runtime = self.providerRuntimes[provider] {
                 let context = ProviderRuntimeContext(
                     provider: provider, settings: self.settings, store: self)
