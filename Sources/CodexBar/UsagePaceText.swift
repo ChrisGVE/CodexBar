@@ -2,7 +2,7 @@ import CodexBarCore
 import Foundation
 
 enum UsagePaceText {
-    struct WeeklyDetail: Sendable {
+    struct WeeklyDetail {
         let leftLabel: String
         let rightLabel: String?
         let expectedUsedPercent: Double
@@ -10,6 +10,16 @@ enum UsagePaceText {
     }
 
     private static let minimumExpectedPercent: Double = 3
+    private static let minimumSessionExpectedPercent: Double = 10
+
+    static func supportsSessionPace(for provider: UsageProvider) -> Bool {
+        switch provider {
+        case .codex, .claude:
+            true
+        default:
+            false
+        }
+    }
 
     static func weeklySummary(provider: UsageProvider, window: RateWindow, now: Date = .init()) -> String? {
         guard let detail = weeklyDetail(provider: provider, window: window, now: now) else { return nil }
