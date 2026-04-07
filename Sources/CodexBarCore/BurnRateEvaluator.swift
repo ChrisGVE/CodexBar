@@ -7,6 +7,21 @@ public enum BurnRateEvaluator {
     /// Minimum number of samples required to produce a short-term reading.
     public static let minimumShortTermSamples: Int = 3
 
+    /// Default lookback for the short-term reading: the last hour.
+    public static let defaultShortTermLookback: TimeInterval = 3600
+
+    /// Default lookback for the long-term reading: the full 24h held by
+    /// `BurnRateBufferStore`. Both lines on the trend chart come from the
+    /// same ring buffer; only the lookback differs. The PRD originally
+    /// proposed reading the long-term series from a percent-based daily
+    /// history store, but the project's existing daily history is in
+    /// tokens / cost terms and does not expose `usedPercent`, so a unit-
+    /// agnostic `% per hour` long-term rate is not derivable from it.
+    /// Reading both series from the buffer keeps the trend chart
+    /// meaningful (recent rate vs typical recent rate, both idle-
+    /// corrected) and removes the need for a new history schema.
+    public static let defaultLongTermLookback: TimeInterval = 24 * 3600
+
     /// Computes an idle-corrected `BurnRate` for the requested window
     /// kind from a sample list.
     ///
@@ -27,8 +42,32 @@ public enum BurnRateEvaluator {
     public static func shortTerm(
         samples: [BurnRateSample],
         window: BurnRateWindowKind,
-        lookback: TimeInterval,
+        lookback: TimeInterval = 3600,
         now: Date = .init()) -> BurnRate?
+    {
+        self.compute(samples: samples, window: window, lookback: lookback, now: now)
+    }
+
+    /// Computes an idle-corrected `BurnRate` over a longer lookback than
+    /// `shortTerm`. Reads from the same ring buffer with the same idle-
+    /// correction algorithm; the only difference is the default lookback.
+    /// The intent is to produce the second line on the trend chart so the
+    /// user can compare "rate over the last hour" against "rate over the
+    /// last 24h" of active burning.
+    public static func longTerm(
+        samples: [BurnRateSample],
+        window: BurnRateWindowKind,
+        lookback: TimeInterval = 24 * 3600,
+        now: Date = .init()) -> BurnRate?
+    {
+        self.compute(samples: samples, window: window, lookback: lookback, now: now)
+    }
+
+    private static func compute(
+        samples: [BurnRateSample],
+        window: BurnRateWindowKind,
+        lookback: TimeInterval,
+        now: Date) -> BurnRate?
     {
         let cutoff = now.addingTimeInterval(-lookback)
         let series = Self.percentSeries(from: samples, window: window, cutoff: cutoff)
@@ -67,8 +106,10 @@ public enum BurnRateEvaluator {
         samples.compactMap { sample in
             guard sample.sampledAt >= cutoff else { return nil }
             let value: Double? = switch window {
-            case .primary: sample.primaryUsedPercent
-            case .secondary: sample.secondaryUsedPercent
+            case .primary:
+                sample.primaryUsedPercent
+            case .secondary:
+                sample.secondaryUsedPercent
             }
             guard let value else { return nil }
             return PercentPoint(date: sample.sampledAt, percent: value)
