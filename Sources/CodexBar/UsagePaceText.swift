@@ -73,4 +73,12 @@ enum UsagePaceText {
         guard pace.expectedUsedPercent >= Self.minimumExpectedPercent else { return nil }
         return pace
     }
+
+    static func sessionPace(provider: UsageProvider, window: RateWindow, now: Date) -> UsagePace? {
+        guard self.supportsSessionPace(for: provider) else { return nil }
+        guard window.remainingPercent > 0 else { return nil }
+        guard let pace = UsagePace.weekly(window: window, now: now, defaultWindowMinutes: 300) else { return nil }
+        guard pace.expectedUsedPercent >= Self.minimumSessionExpectedPercent else { return nil }
+        return pace
+    }
 }

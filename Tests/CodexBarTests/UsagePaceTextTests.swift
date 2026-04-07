@@ -134,4 +134,64 @@ struct UsagePaceTextTests {
             #expect(!UsagePaceText.supportsSessionPace(for: provider))
         }
     }
+
+    @Test
+    func `session pace returns nil for non session providers`() {
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 50,
+            windowMinutes: 300,
+            resetsAt: now.addingTimeInterval(150 * 60),
+            resetDescription: nil)
+        #expect(UsagePaceText.sessionPace(provider: .zai, window: window, now: now) == nil)
+    }
+
+    @Test
+    func `session pace returns nil when window depleted`() {
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 100,
+            windowMinutes: 300,
+            resetsAt: now.addingTimeInterval(150 * 60),
+            resetDescription: nil)
+        #expect(UsagePaceText.sessionPace(provider: .codex, window: window, now: now) == nil)
+    }
+
+    @Test
+    func `session pace returns nil before minimum elapsed`() {
+        // Less than 10% of a 5h window has elapsed (~25 min) so pace is suppressed.
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 5,
+            windowMinutes: 300,
+            resetsAt: now.addingTimeInterval((300 - 25) * 60),
+            resetDescription: nil)
+        #expect(UsagePaceText.sessionPace(provider: .codex, window: window, now: now) == nil)
+    }
+
+    @Test
+    func `session pace returns pace after minimum elapsed`() {
+        // ~50% elapsed in a 5h window (150 min in), well past the 10% guard.
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 50,
+            windowMinutes: 300,
+            resetsAt: now.addingTimeInterval(150 * 60),
+            resetDescription: nil)
+        let pace = UsagePaceText.sessionPace(provider: .codex, window: window, now: now)
+        #expect(pace != nil)
+        #expect(pace?.actualUsedPercent == 50)
+        #expect(pace?.expectedUsedPercent == 50)
+    }
+
+    @Test
+    func `session pace supports claude`() {
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 40,
+            windowMinutes: 300,
+            resetsAt: now.addingTimeInterval(150 * 60),
+            resetDescription: nil)
+        #expect(UsagePaceText.sessionPace(provider: .claude, window: window, now: now) != nil)
+    }
 }
